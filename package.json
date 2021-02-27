@@ -4,6 +4,8 @@
   "description": "",
   "main": "webpack.config.js",
   "scripts": {
+    "start": "node server/index.js",
+    "start:dev": "node-dev --respawn server/index.js",
     "build": "webpack --mode=production",
     "build:dev": "webpack --mode=development --watch"
   },
@@ -11,15 +13,21 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "@babel/core": "^7.13.1",
     "@babel/plugin-proposal-class-properties": "^7.13.0",
     "@babel/preset-react": "^7.12.13",
     "babel-loader": "^8.2.2",
     "html-webpack-plugin": "^5.2.0",
+    "node-dev": "^6.3.0",
     "webpack": "^5.24.2",
     "webpack-cli": "^4.5.0"
   },
   "dependencies": {
+    "axios": "^0.21.1",
+    "express": "^4.17.1",
+    "pg": "^8.5.1",
     "react": "^17.0.1",
-    "react-dom": "^17.0.1"
+    "react-dom": "^17.0.1",
+    "sequelize": "^6.5.0"
   }
 }

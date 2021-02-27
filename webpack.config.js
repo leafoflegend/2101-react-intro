@@ -4,7 +4,7 @@ const HtmlWebpackPlugin = require('html-webpack-plugin');
 const webpackConfig = {
   // Where do I find the entry point to the source code for your client application?
   entry: {
-    path: path.join(__dirname, './src/index.jsx'),
+    path: path.join(__dirname, './client/index.jsx'),
   },
   // Do you want to show the actual line in the source code in the console when an error happens? Use this. (Trick Answer: You do.)
   devtool: 'source-map',
