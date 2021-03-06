@@ -4,6 +4,7 @@ const { db } = require('./db/index');
 const apiRouter = require('./api/index');
 
 const app = express();
+// NOTE: Start server on PORT given to you by heroku.
 const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
