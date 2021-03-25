@@ -1,10 +1,59 @@
 import React, { Component } from 'react';
 import ReactDOM from 'react-dom';
+import { createStore } from 'redux';
+import { HashRouter, Switch, Route } from 'react-router-dom';
 import axios from 'axios';
+
+const initialState = {
+    squares: [],
+    loading: true,
+}
+
+const UPDATE_LOADING = 'UPDATE_LOADING';
+const INSERT_SQUARE = 'INSERT_SQUARE';
+const SET_SQUARES = 'SET_SQUARES';
+
+const updateLoading = (loading = false) => ({
+    type: UPDATE_LOADING,
+    loading,
+});
+const insertSquare = (square) => ({
+    type: INSERT_SQUARE,
+    square,
+});
+const setSquares = (squares) => ({
+    type: SET_SQUARES,
+    squares,
+});
+
+const reducer = (state = initialState, action) => {
+    if (action.type === UPDATE_LOADING) {
+        return {
+            ...state,
+            loading: action.loading,
+        };
+    } else if (action.type === INSERT_SQUARE) {
+        return {
+            ...state,
+            squares: state.squares.concat([action.square]),
+        };
+    } else if (action.type === SET_SQUARES) {
+        return {
+            ...state,
+            squares: action.squares,
+        };
+    }
+
+    return state;
+}
+
+const store = createStore(reducer);
+
+window.store = store;
 
 const app = document.querySelector('#app');
 
-const Square = ({ color, removeSquare, idx }) => {
+const Square = ({ color, goToSquare, idx }) => {
     return (
         <div
             style={{
@@ -13,10 +62,80 @@ const Square = ({ color, removeSquare, idx }) => {
                 height: '100px',
                 margin: '10px',
             }}
-            onClick={() => removeSquare(idx)}
+            onClick={() => goToSquare(idx)}
         >
         </div>
     );
+}
+
+class SingleSquare extends Component{
+    constructor(props) {
+        super(props);
+
+        const { match: { params: { id } } } = props;
+
+        const initialState = store.getState();
+
+        const squareIndex = initialState.squares.findIndex((s) => s.id === parseInt(id));
+        const square = initialState.squares[squareIndex];
+
+        this.state = {
+            square: square
+                ? {
+                    ...square,
+                    squareIndex,
+                } : null,
+        };
+    }
+
+    componentDidMount() {
+        const { square } = this.state;
+
+        if (!square) {
+            try {
+                this.getMySquare();
+            } catch (e) {
+                console.warn(`Failed to fetch your square.`);
+                console.error(e);
+            }
+        }
+    }
+
+    getMySquare = async () => {
+        const { match: { params: { id } } } = this.props;
+
+        const { data: mySquare } = await axios.get(`/api/squares/${id}`);
+
+        store.dispatch(insertSquare(mySquare));
+
+        const squareIndex = store.getState().squares.findIndex((s) => s.id === parseInt(id));
+
+        this.setState({
+            square: {
+                ...mySquare,
+                squareIndex,
+            },
+        });
+    }
+
+    render() {
+        const { match: { params: { id } } } = this.props;
+        const { square } = this.state;
+
+        console.log('My Square: ', square);
+
+        return (
+            <div>
+                <h1>Square ID: {id}</h1>
+                {
+                    square
+                        ? <Square
+                            color={square.color} idx={0} goToSquare={() => {}}
+                        /> : <h2>Loading...</h2>
+                }
+            </div>
+        )
+    }
 }
 
 const badCSSColors = [
@@ -29,27 +148,41 @@ const badCSSColors = [
 
 const randomColor = () => badCSSColors[Math.floor(badCSSColors.length * Math.random())];
 
+class RouterContainer extends Component {
+    render() {
+        return (
+            <HashRouter>
+                <Switch>
+                    <Route path={'/:id'} component={SingleSquare} />
+                    <Route component={Home} />
+                </Switch>
+            </HashRouter>
+        )
+    }
+}
+
 class Home extends Component {
-    state = {
-        squares: [],
-        loading: true,
-    };
+    constructor(props) {
+        super(props);
+
+        this.state = store.getState();
+    }
 
     async componentDidMount() {
+        store.subscribe(() => {
+            this.setState(store.getState());
+        });
+
         const { data: squares } = await axios.get('/api/squares');
 
-        this.setState({
-            squares,
-            loading: false,
-        });
+        store.dispatch(setSquares(squares));
+        store.dispatch(updateLoading());
     }
 
     refreshSquares = async () => {
         const { data: squares } = await axios.get('/api/squares');
 
-        this.setState({
-            squares,
-        });
+        store.dispatch(setSquares(squares));
     }
 
     addSquare = async () => {
@@ -57,19 +190,17 @@ class Home extends Component {
             color: randomColor(),
         };
 
-        await axios.post('/api/squares', newSquare);
+        const createdSquare = await axios.post('/api/squares', newSquare);
 
-        await this.refreshSquares();
+        store.dispatch(insertSquare(createdSquare));
     }
 
-    removeSquare = async (idx) => {
+    goToSquare = (idx) => {
         const { squares } = this.state;
 
         const { id } = squares[idx];
 
-        await axios.delete(`/api/squares/${id}`);
-
-        await this.refreshSquares();
+        this.props.history.push(`/${id}`);
     }
 
     render() {
@@ -113,7 +244,7 @@ class Home extends Component {
                                     color={color}
                                     key={idx}
                                     idx={idx}
-                                    removeSquare={this.removeSquare}
+                                    goToSquare={this.goToSquare}
                                 />
                             );
                         })
@@ -124,6 +255,6 @@ class Home extends Component {
     }
 }
 
-ReactDOM.render(<Home />, app, () => {
+ReactDOM.render(<RouterContainer />, app, () => {
     console.log('Application is rendered!');
 });

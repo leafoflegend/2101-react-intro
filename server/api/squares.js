@@ -35,4 +35,12 @@ squaresRouter.get('/', async (req, res) => {
     res.send(allSquares);
 });
 
+squaresRouter.get('/:id', async (req, res) => {
+    const { id } = req.params;
+
+    const square = await Square.findByPk(id);
+
+    res.send(square);
+});
+
 module.exports = squaresRouter;
